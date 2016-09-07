@@ -1,4 +1,7 @@
 #!/bin/bash
+# NOTE: originally taken from https://github.com/docker-library/rabbitmq/blob/01cebb700efb951058263f3439ab83fbe81222aa/docker-entrypoint.sh
+# Adds support for RabbitMQ Clusterer plugin
+
 set -eu
 
 # allow the container to be started with `--user`
@@ -36,6 +39,9 @@ rabbitConfigKeys=(
   default_vhost
   hipe_compile
 )
+clustererConfigKeys=(
+  disc_nodes
+)
 fileConfigKeys=(
   management_ssl_cacertfile
   management_ssl_certfile
@@ -48,6 +54,7 @@ allConfigKeys=(
   "${managementConfigKeys[@]/#/management_}"
   "${rabbitConfigKeys[@]}"
   "${sslConfigKeys[@]/#/ssl_}"
+  "${clustererConfigKeys[@]/#/clusterer_}"
 )
 
 declare -A configDefaults=(
@@ -61,6 +68,7 @@ declare -A configDefaults=(
 haveConfig=
 haveSslConfig=
 haveManagementSslConfig=
+haveClustererConfig=1
 for conf in "${allConfigKeys[@]}"; do
   var="RABBITMQ_${conf^^}"
   val="${!var:-}"
@@ -76,7 +84,7 @@ if [ "$haveSslConfig" ]; then
   missing=()
   for sslConf in cacertfile certfile keyfile; do
     var="RABBITMQ_SSL_${sslConf^^}"
-    val="${!var}"
+    val="${!var:-}"
     if [ -z "$val" ]; then
       missing+=( "$var" )
     fi
@@ -85,6 +93,27 @@ if [ "$haveSslConfig" ]; then
     {
       echo
       echo 'error: SSL requested, but missing required configuration'
+      for miss in "${missing[@]}"; do
+        echo "  - $miss"
+      done
+      echo
+    } >&2
+    exit 1
+  fi
+fi
+if [ "$haveClustererConfig" ]; then
+  missing=()
+  for clustererConfKey in $clustererConfigKeys; do
+    var="RABBITMQ_CLUSTERER_${clustererConfKey^^}"
+    val="${!var:-}"
+    if [ -z "$val" ]; then
+      missing+=( "$var" )
+    fi
+  done
+  if [ "${#missing[@]}" -gt 0 ]; then
+    {
+      echo
+      echo 'error: Clusterer requested, but missing required configuration'
       for miss in "${missing[@]}"; do
         echo "  - $miss"
       done
@@ -256,6 +285,23 @@ if [ "$1" = 'rabbitmq-server' ] && [ "$haveConfig" ]; then
 
     fullConfig+=(
       "{ rabbitmq_management, $(rabbit_array "{ listener, $(rabbit_array "${rabbitManagementListenerConfig[@]}") }") }"
+    )
+  fi
+  if [ "$(rabbitmq-plugins list -m -e rabbitmq_clusterer)" ]; then
+    rabbitClustererNodeConfigs=()
+    rabbitClustererNodenames=()
+    for node in $(echo $RABBITMQ_CLUSTERER_DISC_NODES | sed -e 's/\s*,\s*/ /g'); do
+      rabbitClustererNodeConfigs+=("{ rabbit@${node}, disc }")
+      rabbitClustererNodenames+=($node)
+    done
+
+    rabbitClustererConfig+=(
+      "{ nodes, $(rabbit_array "${rabbitClustererNodeConfigs[@]}") }"
+      "{ gospel, { node, rabbit@${rabbitClustererNodenames[0]} } }"
+    )
+
+    fullConfig+=(
+      "{ rabbitmq_clusterer, $(rabbit_array "${rabbitClustererConfig[@]}") }"
     )
   fi
 
