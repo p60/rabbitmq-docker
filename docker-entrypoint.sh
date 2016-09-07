@@ -167,6 +167,14 @@ if [ "${RABBITMQ_ERLANG_COOKIE:-}" ]; then
     echo "$RABBITMQ_ERLANG_COOKIE" > "$cookieFile"
     chmod 600 "$cookieFile"
   fi
+else
+  {
+    echo
+    echo 'error: Clusterer requested, but missing required configuration'
+    echo "  - RABBITMQ_ERLANG_COOKIE"
+    echo
+  } >&2
+    exit 1
 fi
 
 # prints "$2$1$3$1...$N"
