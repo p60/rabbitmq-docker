@@ -22,5 +22,5 @@ Use environment variables `-e KEY=VALUE`
     sauron-staging-rabbitmq-2"`
   - If running under Docker Cloud, each container will have a host name of the
     service name suffixed by the containers index. For example, if a third
-    container was started for a RabbitMQ service name "bunny", then the
+    container was started for a RabbitMQ service named "bunny", then the
     container will have a host name of "bunny-3".
