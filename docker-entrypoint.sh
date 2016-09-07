@@ -142,6 +142,8 @@ if [ "${#missingFiles[@]}" -gt 0 ]; then
   exit 1
 fi
 
+export RABBITMQ_BOOT_MODULE=rabbit_clusterer
+
 # set defaults for missing values (but only after we're done with all our checking so we don't throw any of that off)
 for conf in "${!configDefaults[@]}"; do
   default="${configDefaults[$conf]}"
@@ -299,13 +301,13 @@ if [ "$1" = 'rabbitmq-server' ] && [ "$haveConfig" ]; then
     rabbitClustererNodeConfigs=()
     rabbitClustererNodenames=()
     for node in $(echo $RABBITMQ_CLUSTERER_DISC_NODES | sed -e 's/\s*,\s*/ /g'); do
-      rabbitClustererNodeConfigs+=("{ rabbit@${node}, disc }")
+      rabbitClustererNodeConfigs+=("{ 'rabbit@${node}', disc }")
       rabbitClustererNodenames+=($node)
     done
 
     rabbitClustererConfig+=(
       "{ nodes, $(rabbit_array "${rabbitClustererNodeConfigs[@]}") }"
-      "{ gospel, { node, rabbit@${rabbitClustererNodenames[0]} } }"
+      "{ gospel, { node, 'rabbit@${rabbitClustererNodenames[0]}' } }"
     )
 
     fullConfig+=(
