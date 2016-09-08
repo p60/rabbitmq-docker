@@ -143,6 +143,7 @@ if [ "${#missingFiles[@]}" -gt 0 ]; then
 fi
 
 export RABBITMQ_BOOT_MODULE=rabbit_clusterer
+export RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-pa '/plugins/rabbitmq_clusterer-${RABBITMQ_VERSION}.ez/rabbitmq_clusterer-${RABBITMQ_VERSION}/ebin'"
 
 # set defaults for missing values (but only after we're done with all our checking so we don't throw any of that off)
 for conf in "${!configDefaults[@]}"; do
@@ -305,9 +306,14 @@ if [ "$1" = 'rabbitmq-server' ] && [ "$haveConfig" ]; then
       rabbitClustererNodenames+=($node)
     done
 
-    rabbitClustererConfig+=(
+    rabbitClustererConfigContent=(
+      "{ version, 1 }"
       "{ nodes, $(rabbit_array "${rabbitClustererNodeConfigs[@]}") }"
       "{ gospel, { node, 'rabbit@${rabbitClustererNodenames[0]}' } }"
+    )
+
+    rabbitClustererConfig=(
+      "{ config, $(rabbit_array "${rabbitClustererConfigContent[@]}") }"
     )
 
     fullConfig+=(
@@ -329,7 +335,7 @@ if [ "$haveSslConfig" ] && [ -f "$combinedSsl" ]; then
   # we don't handle clustering in this script, but these args should ensure
   # clustered SSL-enabled members will talk nicely
   export ERL_SSL_PATH="$(erl -eval 'io:format("~p", [code:lib_dir(ssl, ebin)]),halt().' -noshell)"
-  export RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-pa '$ERL_SSL_PATH' -proto_dist inet_tls -ssl_dist_opt server_certfile '$combinedSsl' -ssl_dist_opt server_secure_renegotiate true client_secure_renegotiate true"
+  export RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS+=" -pa '$ERL_SSL_PATH' -proto_dist inet_tls -ssl_dist_opt server_certfile '$combinedSsl' -ssl_dist_opt server_secure_renegotiate true client_secure_renegotiate true"
   export RABBITMQ_CTL_ERL_ARGS="$RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS"
 fi
 
