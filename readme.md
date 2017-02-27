@@ -14,7 +14,7 @@ Use environment variables `-e KEY=VALUE`
 
 - `RABBITMQ_ERLANG_COOKIE`[required] the cookie to allow multiple nodes to
   communicate with each other
-  - Example `RABBITMQ_ERLANG_COOKIE="GUZMZGPBZMBJZCAVMIELroot@12caa020b0a7"`
+  - Example `RABBITMQ_ERLANG_COOKIE="GUZMZGPBZMBJZCAVMIEL"`
 
 - `RABBITMQ_CLUSTERER_DISC_NODES`[required] the expected node names that makes
   up the cluster
